@@ -8,10 +8,12 @@ def init_db():
     # Users table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        email TEXT PRIMARY KEY,
-        access_token TEXT
+    email TEXT PRIMARY KEY,
+    access_token TEXT,
+    gmail_page_token TEXT
     )
     """)
+
 
     # Emails table (DEDUPED)
     cursor.execute("""

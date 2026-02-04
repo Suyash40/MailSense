@@ -32,50 +32,33 @@ def extract_body(payload):
     return ""
 
 
-def fetch_user_emails(token, max_results=20):
+def fetch_user_emails(token, max_results=10, page_token=None):
 
     headers = {
         "Authorization": f"Bearer {token}"
     }
 
-    all_message_ids = []
-    page_token = None
+    params = {
+        "maxResults": max_results
+    }
 
-    # 1️⃣ Get message IDs (pagination)
-    while len(all_message_ids) < max_results:
+    if page_token:
+        params["pageToken"] = page_token
 
-        params = {
-            "maxResults": 20
-        }
+    res = requests.get(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+        headers=headers,
+        params=params
+    )
 
-        if page_token:
-            params["pageToken"] = page_token
+    data = res.json()
 
-        res = requests.get(
-            "https://gmail.googleapis.com/gmail/v1/users/me/messages",
-            headers=headers,
-            params=params
-        )
-        print("RAW",res.text)
+    messages = data.get("messages", [])
+    next_token = data.get("nextPageToken")
 
-        data = res.json()
-        
-        messages = data.get("messages", [])
-        print("TOTAL MESSAGES:", len(messages))
-
-        if "messages" not in data:
-            break
-
-        all_message_ids.extend(data["messages"])
-        page_token = data.get("nextPageToken")
-
-        if not page_token:
-            break
-
-    # 2️⃣ Fetch full email content
     emails = []
 
-    for msg in all_message_ids:
+    for msg in messages:
 
         msg_id = msg["id"]
 
@@ -84,8 +67,9 @@ def fetch_user_emails(token, max_results=20):
             headers=headers
         )
 
-        data = msg_res.json()
-        payload = data.get("payload", {})
+        msg_data = msg_res.json()
+
+        payload = msg_data.get("payload", {})
         headers_list = payload.get("headers", [])
 
         subject = ""
@@ -113,9 +97,7 @@ def fetch_user_emails(token, max_results=20):
             "body": body
         })
 
-        if len(emails) >= max_results:
-            break
+    print("FETCHED:", len(emails), "NEXT TOKEN:", next_token)
 
-    print("TOTAL EMAILS FETCHED:", len(emails))
+    return emails, next_token
 
-    return emails

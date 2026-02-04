@@ -15,16 +15,20 @@ def get_emails(limit: int = 10, offset: int = 0):
 
     cursor = conn.cursor()
 
-    # Get current user (latest login)
-    cursor.execute("SELECT email, access_token FROM users ORDER BY ROWID DESC LIMIT 1")
+    cursor.execute("""
+        SELECT email, access_token, gmail_page_token
+        FROM users
+        ORDER BY ROWID DESC LIMIT 1
+    """)
+
     user = cursor.fetchone()
 
     if not user:
         return {"emails": []}
 
-    email, token = user
+    email, token, page_token = user
 
-    # ✅ Fetch paginated emails from DB for THIS USER
+    # 1️⃣ Try DB first
     cursor.execute("""
         SELECT subject, body, category, action_item
         FROM emails
@@ -35,8 +39,7 @@ def get_emails(limit: int = 10, offset: int = 0):
 
     rows = cursor.fetchall()
 
-    # ✅ If DB has page → return it immediately
-    if rows:
+    if len(rows) == limit:
         return {
             "emails": [
                 {
@@ -49,20 +52,22 @@ def get_emails(limit: int = 10, offset: int = 0):
             ]
         }
 
-    # ✅ ONLY fetch Gmail when:
-    # first page requested AND DB empty for this user
-    if offset != 0:
+    # 2️⃣ Fetch next batch from Gmail
+    gmail_emails, next_token = fetch_user_emails(
+        token,
+        max_results=limit,
+        page_token=page_token
+    )
+
+    if not gmail_emails:
         return {"emails": []}
 
-    # 🔥 First-time fetch from Gmail + AI
-    raw_emails = fetch_user_emails(token, max_results=50)
-
-    result = graph.invoke({"emails": raw_emails})
+    result = graph.invoke({"emails": gmail_emails})
     processed = result["emails"]
 
     for mail in processed:
         cursor.execute("""
-            INSERT OR IGNORE INTO emails 
+            INSERT OR IGNORE INTO emails
             (user_email, subject, body, category, action_item, created_at)
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, (
@@ -73,10 +78,16 @@ def get_emails(limit: int = 10, offset: int = 0):
             mail["actions"]["task_created"]
         ))
 
+    # save cursor
+    cursor.execute("""
+        UPDATE users SET gmail_page_token = ?
+        WHERE email = ?
+    """, (next_token, email))
+
     conn.commit()
 
-    # ✅ Return first page from processed result
-    return {"emails": processed[:limit]}
+    return {"emails": processed}
+
 
 
 
