@@ -8,15 +8,68 @@ class EmailClassifierAgent:
     def classify(self, subject, body):
 
         prompt = f"""
-You are an intelligent email classification system.
+You are an expert email classification AI.
 
-Classify the email into ONLY ONE of these categories:
+Your task is to classify the email into ONLY ONE of the following categories:
 
-urgent = security alerts, account issues, immediate action required  
-job = job offers, interview emails, recruiter messages  
-bill = invoices, payments, receipts, subscriptions  
-spam = promotional emails, marketing, ads, offers, newsletters, scams, fake warnings  
-normal = personal or general non-urgent emails  
+urgent  
+job  
+bill  
+spam  
+normal  
+
+### CATEGORY DEFINITIONS:
+
+urgent:
+- security alerts
+- suspicious login warnings
+- password changes
+- account access issues
+- payment failures
+- delivery problems
+- anything that requires immediate action
+
+job:
+- job offers
+- internship emails
+- interview invitations
+- recruiter messages
+- application updates
+- hiring process emails
+
+bill:
+- invoices
+- payment confirmations
+- subscription charges
+- receipts
+- bank statements
+
+spam:
+- promotional offers
+- discounts
+- marketing campaigns
+- newsletters
+- ads
+- lottery winnings
+- fake alerts
+- scam-looking emails
+
+normal:
+- personal messages
+- general updates
+- non-urgent communication
+
+---
+
+### IMPORTANT RULES:
+
+1. If it looks promotional or marketing → spam  
+2. If it is a security or account warning → urgent  
+3. If related to job/internship/hiring → job  
+4. If related to money transactions → bill  
+5. Otherwise → normal  
+
+---
 
 Email Subject:
 {subject}
@@ -24,12 +77,10 @@ Email Subject:
 Email Body:
 {body}
 
-Rules:
-- If the email is promotional, marketing, newsletter, or offer → choose spam
-- If the email looks fake, scammy, or suspicious → choose spam
-- If it is a real security alert needing action → choose urgent
+---
 
-Respond with ONLY the category name.
+Respond with ONLY one word:
+urgent, job, bill, spam, or normal
 """
 
         response = client.chat.completions.create(

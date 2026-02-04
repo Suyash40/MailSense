@@ -24,11 +24,7 @@ PASSWORD = "esoe zzrx kddi orsp"
 
 
 def reader_node(state: EmailState):
-
-    reader = EmailReaderAgent(EMAIL, PASSWORD)
-    emails = reader.fetch_emails()
-
-    return {"emails": emails}
+    return state   # emails already provided from API layer
 
 
 def classifier_node(state: EmailState):

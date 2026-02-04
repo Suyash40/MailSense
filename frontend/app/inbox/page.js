@@ -7,19 +7,13 @@ import { useEmails } from "../../context/EmailContext";
 
 export default function Inbox() {
 
-  const { emails, loading } = useEmails();
+  const { emails, loading, loadMore } = useEmails();
   const [selected, setSelected] = useState(null);
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get("category");
   const filteredEmails = categoryFilter
     ? emails.filter(e => e.category === categoryFilter)
     : emails;
-
-
-
-  if (loading) {
-    return <p className="text-green-400 p-6">Loading emails...</p>;
-  }
 
 
   return (
@@ -43,6 +37,15 @@ export default function Inbox() {
               • {mail.subject}
             </div>
           ))}
+          <button
+            onClick={loadMore}
+            disabled={loading}
+            className="mt-4 w-full bg-green-500 text-black py-2 rounded hover:bg-green-400 disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "Load More"}
+          </button>
+
+
 
 
         </div>
